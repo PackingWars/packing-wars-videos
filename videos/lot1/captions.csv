@@ -1,0 +1,96 @@
+file,episode,concept,theme,winner,winner_fill,duration_s,tiktok_caption,instagram_caption,reveal_comment
+ep01_classic.mp4,1,Classic Duel,NEON,SMART FIT,96.3,24.1,"Which strategy fills the box best? SMART FIT, BOTTOM-RIGHT, BIGGEST FIRST, BOTTOM-LEFT. Pick one before the end #satisfying #oddlysatisfying #fyp #algorithm #simulation","Which strategy fills the box best?
+
+SMART FIT picks the spot that touches the most edges.
+BOTTOM-RIGHT stacks from the bottom right.
+BIGGEST FIRST places the biggest pieces first.
+BOTTOM-LEFT stacks from the bottom left.
+
+Same pieces, same box. Only the strategy changes.
+
+#algorithms #puzzle #oddlysatisfying #computerscience #reels #coding #visualization #asmr",Answer: SMART FIT won with 96.3% (BIGGEST FIRST was 0.7% behind)
+ep02_size-wars.mp4,2,Size Wars,OCEAN,BIGGEST FIRST,97.2,22.9,"Big, small or long pieces first? BIGGEST FIRST, SMALL FIRST, LONG FIRST, RANDOM. Pick one before the end #oddlysatisfying #satisfying #fyp #simulation #algorithm","Big, small or long pieces first?
+
+BIGGEST FIRST places the biggest pieces first.
+SMALL FIRST places the smallest pieces first.
+LONG FIRST places the longest pieces first.
+RANDOM drops each piece anywhere it fits.
+
+Same pieces, same box. Only the strategy changes.
+
+#coding #puzzle #asmr #reels #computerscience #oddlysatisfying #visualization #satisfying",Answer: BIGGEST FIRST won with 97.2% (LONG FIRST was 2.6% behind)
+ep03_corner-wars.mp4,3,Corner Wars,SUNSET,SMART FIT,97.8,22.7,"Does the starting corner matter? BOTTOM-LEFT, BOTTOM-RIGHT, RANDOM, SMART FIT. Pick one before the end #oddlysatisfying #asmr #fyp #satisfying #algorithm","Does the starting corner matter?
+
+BOTTOM-LEFT stacks from the bottom left.
+BOTTOM-RIGHT stacks from the bottom right.
+RANDOM drops each piece anywhere it fits.
+SMART FIT picks the spot that touches the most edges.
+
+Same pieces, same box. Only the strategy changes.
+
+#reels #asmr #simulation #visualization #coding #computerscience #oddlysatisfying #satisfying",Answer: SMART FIT won with 97.8% (BOTTOM-LEFT was 5.7% behind)
+ep04_luck-vs-strategy.mp4,4,Luck vs Strategy,CANDY,BEST COMBO,99.0,22.8,"Can pure luck beat a real strategy? RANDOM, SMART FIT, BIGGEST FIRST, BEST COMBO. Pick one before the end #algorithm #puzzle #oddlysatisfying #fyp #coding","Can pure luck beat a real strategy?
+
+RANDOM drops each piece anywhere it fits.
+SMART FIT picks the spot that touches the most edges.
+BIGGEST FIRST places the biggest pieces first.
+BEST COMBO biggest pieces first, best-contact spot.
+
+Same pieces, same box. Only the strategy changes.
+
+#satisfying #algorithms #oddlysatisfying #coding #simulation #visualization #asmr #puzzle",Answer: BEST COMBO won with 99.0% (BIGGEST FIRST was 2.4% behind)
+ep05_mystery.mp4,5,Mystery Strategies,OCEAN,LONG FIRST,95.7,23.8,"Which of A, B, C, D is the smartest strategy? Names revealed at the end. Pick one before the end #simulation #puzzle #coding #oddlysatisfying #fyp","Which of A, B, C, D is the smartest strategy?
+
+Same pieces, same box. Names revealed at the end.
+
+#satisfying #asmr #computerscience #coding #oddlysatisfying #visualization #algorithms #puzzle","Answer: D (LONG FIRST) won with 95.7% (SMART FIT was 1.1% behind). A = BOTTOM-RIGHT, B = SMART FIT, C = BOTTOM-LEFT, D = LONG FIRST"
+ep06_giant-blocks.mp4,6,Giant Blocks,SUNSET,BIGGEST FIRST,93.2,26.0,"Only a few giant pieces. Who survives? BIGGEST FIRST, SMALL FIRST, BOTTOM-LEFT, SMART FIT. Pick one before the end #oddlysatisfying #satisfying #simulation #coding #fyp","Only a few giant pieces. Who survives?
+
+BIGGEST FIRST places the biggest pieces first.
+SMALL FIRST places the smallest pieces first.
+BOTTOM-LEFT stacks from the bottom left.
+SMART FIT picks the spot that touches the most edges.
+
+Same pieces, same box. Only the strategy changes.
+
+#algorithms #puzzle #reels #visualization #computerscience #oddlysatisfying #simulation #satisfying",Answer: BIGGEST FIRST won with 93.2% (SMART FIT was 1.9% behind)
+ep07_tiny-pieces.mp4,7,Tiny Pieces,CANDY,SMART FIT,98.4,24.4,"Hundreds of tiny pieces. Who wins? RANDOM, SMART FIT, BIGGEST FIRST, BOTTOM-LEFT. Pick one before the end #coding #asmr #puzzle #fyp #algorithm","Hundreds of tiny pieces. Who wins?
+
+RANDOM drops each piece anywhere it fits.
+SMART FIT picks the spot that touches the most edges.
+BIGGEST FIRST places the biggest pieces first.
+BOTTOM-LEFT stacks from the bottom left.
+
+Same pieces, same box. Only the strategy changes.
+
+#visualization #asmr #simulation #satisfying #computerscience #puzzle #coding #reels",Answer: SMART FIT won with 98.4% (BIGGEST FIRST was 0.7% behind)
+ep08_photo-finish.mp4,8,Photo Finish,NEON,BIGGEST FIRST,96.2,24.2,"This one is decided by a few cells. Who wins? BIGGEST FIRST, SMALL FIRST, SMART FIT, BOTTOM-LEFT. Pick one before the end #simulation #coding #fyp #algorithm #satisfying","This one is decided by a few cells. Who wins?
+
+BIGGEST FIRST places the biggest pieces first.
+SMALL FIRST places the smallest pieces first.
+SMART FIT picks the spot that touches the most edges.
+BOTTOM-LEFT stacks from the bottom left.
+
+Same pieces, same box. Only the strategy changes.
+
+#simulation #puzzle #oddlysatisfying #satisfying #asmr #visualization #computerscience #reels",Answer: BIGGEST FIRST won with 96.2% (SMART FIT was 0.0% behind)
+ep09_rainbow.mp4,9,Rainbow Pieces,CANDY,BEST COMBO,97.7,24.8,"Colors show piece size. Which strategy packs best? RANDOM, BEST COMBO, LONG FIRST, SMALL FIRST. Pick one before the end #asmr #fyp #simulation #algorithm #satisfying","Colors show piece size. Which strategy packs best?
+
+RANDOM drops each piece anywhere it fits.
+BEST COMBO biggest pieces first, best-contact spot.
+LONG FIRST places the longest pieces first.
+SMALL FIRST places the smallest pieces first.
+
+Same pieces, same box. Only the strategy changes.
+
+#oddlysatisfying #coding #satisfying #asmr #simulation #visualization #computerscience #algorithms",Answer: BEST COMBO won with 97.7% (LONG FIRST was 2.0% behind)
+ep10_speedrun.mp4,10,Speedrun,OCEAN,LONG FIRST,97.5,16.3,"Quick race. Who wins? LONG FIRST, SMALL FIRST, BOTTOM-RIGHT, BIGGEST FIRST. Pick one before the end #puzzle #simulation #satisfying #oddlysatisfying #asmr","Quick race. Who wins?
+
+LONG FIRST places the longest pieces first.
+SMALL FIRST places the smallest pieces first.
+BOTTOM-RIGHT stacks from the bottom right.
+BIGGEST FIRST places the biggest pieces first.
+
+Same pieces, same box. Only the strategy changes.
+
+#asmr #simulation #satisfying #computerscience #puzzle #coding #oddlysatisfying #reels",Answer: LONG FIRST won with 97.5% (BIGGEST FIRST was 0.5% behind)

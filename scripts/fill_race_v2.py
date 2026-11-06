@@ -46,6 +46,11 @@ BAR_X0, BAR_X1 = 330, 880
 TITLE = "WHO PACKS BEST?"
 MASK = np.ones((H_BIN, W_BIN), bool)     # cases utilisables de la boite (sa forme)
 CAP = int(MASK.sum())                    # nombre de cases utilisables
+PSIZE = (3, 17, 0.5)                     # tailles de pieces : min, max (exclu), exposant du poids 1/taille**exp
+MYSTERY = False                          # True : noms caches (A,B,C,D) puis reveles a la fin
+COLOR_BY_SIZE = False                    # True : pieces colorees selon leur aire, pas selon la strategie
+RAINBOW = [(96, 165, 250), (45, 212, 191), (74, 222, 128), (250, 204, 21), (251, 146, 60), (244, 63, 94)]
+AREA_EDGES = (24, 48, 80, 120, 170)      # seuils d'aire -> 6 couleurs (petit -> grand)
 
 
 def font(size):
@@ -67,8 +72,8 @@ def smooth(x):
 
 # ---------- simulation ----------
 def make_pieces(rng):
-    sizes = np.arange(3, 17)
-    p = 1.0 / sizes ** 0.5
+    sizes = np.arange(PSIZE[0], PSIZE[1])
+    p = 1.0 / sizes ** PSIZE[2]
     p /= p.sum()
     pieces, area = [], 0
     while area < CAP * FILL_TARGET:
@@ -184,6 +189,12 @@ class Renderer:
         rng = np.random.default_rng(99)
         self.colors = [[tuple(int(c * rng.uniform(0.68, 1.0)) for c in st[1]) for _ in range(n)]
                        for st in STRATS]
+        if COLOR_BY_SIZE:                                 # couleur = taille de la piece (meme palette partout)
+            for s, plan in enumerate(self.plans):
+                for j, r in enumerate(plan):
+                    if r:
+                        k = int(np.searchsorted(AREA_EDGES, r[2] * r[3], side="right"))
+                        self.colors[s][j] = tuple(int(c * rng.uniform(0.82, 1.0)) for c in RAINBOW[k])
         self.pdata = np.zeros((S, n, NP, 4))
         self.pdata[..., 0] = rng.uniform(0.05, 0.95, (S, n, NP))
         self.pdata[..., 1] = rng.uniform(-2.4, 2.4, (S, n, NP))
@@ -264,8 +275,15 @@ class Renderer:
     def make_bg(self):
         img = Image.new("RGB", (VW, VH), BG)
         d = ImageDraw.Draw(img)
-        d.text((VW // 2, 110), TITLE, font=self.f_title, fill=(240, 240, 245), anchor="mm")
+        size = 70
+        ft = self.f_title
+        while size > 40 and d.textlength(TITLE, font=ft) > 940:     # titre long : on reduit la police
+            size -= 4
+            ft = font(size)
+        d.text((VW // 2, 110), TITLE, font=ft, fill=(240, 240, 245), anchor="mm")
         for s, (name, col, _, _) in enumerate(STRATS):
+            if MYSTERY:                                   # etiquettes dessinees a part (compose)
+                continue
             d.text((PX[s % 2], PY[s // 2] - 30), name, font=self.f_head, fill=col, anchor="lm")
             d.text((90, BAR_Y0 + s * BAR_STEP + BAR_H // 2), name, font=self.f_bar, fill=col, anchor="lm")
         arr = np.array(img)
@@ -390,6 +408,15 @@ class Renderer:
             d.text((PX[s % 2] + PW, PY[s // 2] - 30), pct, font=self.f_pct, fill=(235, 235, 240), anchor="rm")
             d.text((BAR_X1 + 15, BAR_Y0 + s * BAR_STEP + BAR_H // 2), pct, font=self.f_bar,
                    fill=(200, 200, 210), anchor="lm")
+        if MYSTERY:                                       # lettres A-D qui laissent place aux noms a la fin
+            k = float(smooth(end_t * 1.5))
+            for s, (name, col, _, _) in enumerate(STRATS):
+                for txt, a in (("ABCD"[s], 1 - k), (name, k)):
+                    if a <= 0.02:
+                        continue
+                    c = tuple(int(b * (1 - a) + v * a) for b, v in zip(BG, col))
+                    d.text((PX[s % 2], PY[s // 2] - 30), txt, font=self.f_head, fill=c, anchor="lm")
+                    d.text((90, BAR_Y0 + s * BAR_STEP + BAR_H // 2), txt, font=self.f_bar, fill=c, anchor="lm")
         wname, wcol = STRATS[self.winner][0], STRATS[self.winner][1]
         pos = (VW // 2, 185)
         if rp > 0:
@@ -448,15 +475,16 @@ def synth(r, sr=44100):
         return sum(am * np.sin(2 * np.pi * f0 * ra * t12) * np.exp(-t12 * dc)
                    for ra, am, dc in ((1, 1.0, 3.0), (2.76, 0.5, 5.0), (5.4, 0.25, 8.0)))
 
+    dens = min(1.0, (90 / r.n) ** 0.5)                    # beaucoup de petites pieces : on baisse le volume
     for s in range(len(STRATS)):
         lands, frac, Ds = r.ev[s]
         for m in range(len(lands)):
             t0 = r.tf(lands[m])
-            vol = 0.3 + 0.5 * min(1.0, Ds[m] / ((H_BIN + 12) * CELL))
+            vol = (0.3 + 0.5 * min(1.0, Ds[m] / ((H_BIN + 12) * CELL))) * dens
             add(thunk, t0, 0.10 * vol)
             idx = int(frac[m] * 11)
             freq = 196.0 * 2 ** ((scale[idx % 5] + 12 * (idx // 5)) / 12) * (1 + 0.003 * s)
-            add((np.sin(2 * np.pi * freq * t3) + 0.3 * np.sin(4 * np.pi * freq * t3)) * env, t0, 0.04)
+            add((np.sin(2 * np.pi * freq * t3) + 0.3 * np.sin(4 * np.pi * freq * t3)) * env, t0, 0.04 * dens)
         for thr, mult in ((0.90, 1.0), (0.95, 1.5)):
             k = int(np.searchsorted(frac, thr, side="left"))
             if k < len(lands):

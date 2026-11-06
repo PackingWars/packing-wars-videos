@@ -1,0 +1,222 @@
+[
+  {
+    "file": "ep01_classic.mp4",
+    "episode": 1,
+    "concept": "Classic Duel",
+    "theme": "NEON",
+    "seed": 1100,
+    "strategies": [
+      "SMART FIT",
+      "BOTTOM-RIGHT",
+      "BIGGEST FIRST",
+      "BOTTOM-LEFT"
+    ],
+    "winner": "SMART FIT",
+    "winner_fill": 96.3,
+    "gap": 0.71,
+    "photo_finish": true,
+    "duration_s": 24.1,
+    "pieces": 93,
+    "tiktok_caption": "Which strategy fills the box best? SMART FIT, BOTTOM-RIGHT, BIGGEST FIRST, BOTTOM-LEFT. Pick one before the end #satisfying #oddlysatisfying #fyp #algorithm #simulation",
+    "instagram_caption": "Which strategy fills the box best?\n\nSMART FIT picks the spot that touches the most edges.\nBOTTOM-RIGHT stacks from the bottom right.\nBIGGEST FIRST places the biggest pieces first.\nBOTTOM-LEFT stacks from the bottom left.\n\nSame pieces, same box. Only the strategy changes.\n\n#algorithms #puzzle #oddlysatisfying #computerscience #reels #coding #visualization #asmr",
+    "reveal_comment": "Answer: SMART FIT won with 96.3% (BIGGEST FIRST was 0.7% behind)"
+  },
+  {
+    "file": "ep02_size-wars.mp4",
+    "episode": 2,
+    "concept": "Size Wars",
+    "theme": "OCEAN",
+    "seed": 1200,
+    "strategies": [
+      "BIGGEST FIRST",
+      "SMALL FIRST",
+      "LONG FIRST",
+      "RANDOM"
+    ],
+    "winner": "BIGGEST FIRST",
+    "winner_fill": 97.2,
+    "gap": 2.57,
+    "photo_finish": false,
+    "duration_s": 22.9,
+    "pieces": 80,
+    "tiktok_caption": "Big, small or long pieces first? BIGGEST FIRST, SMALL FIRST, LONG FIRST, RANDOM. Pick one before the end #oddlysatisfying #satisfying #fyp #simulation #algorithm",
+    "instagram_caption": "Big, small or long pieces first?\n\nBIGGEST FIRST places the biggest pieces first.\nSMALL FIRST places the smallest pieces first.\nLONG FIRST places the longest pieces first.\nRANDOM drops each piece anywhere it fits.\n\nSame pieces, same box. Only the strategy changes.\n\n#coding #puzzle #asmr #reels #computerscience #oddlysatisfying #visualization #satisfying",
+    "reveal_comment": "Answer: BIGGEST FIRST won with 97.2% (LONG FIRST was 2.6% behind)"
+  },
+  {
+    "file": "ep03_corner-wars.mp4",
+    "episode": 3,
+    "concept": "Corner Wars",
+    "theme": "SUNSET",
+    "seed": 1300,
+    "strategies": [
+      "BOTTOM-LEFT",
+      "BOTTOM-RIGHT",
+      "RANDOM",
+      "SMART FIT"
+    ],
+    "winner": "SMART FIT",
+    "winner_fill": 97.8,
+    "gap": 5.69,
+    "photo_finish": false,
+    "duration_s": 22.7,
+    "pieces": 84,
+    "tiktok_caption": "Does the starting corner matter? BOTTOM-LEFT, BOTTOM-RIGHT, RANDOM, SMART FIT. Pick one before the end #oddlysatisfying #asmr #fyp #satisfying #algorithm",
+    "instagram_caption": "Does the starting corner matter?\n\nBOTTOM-LEFT stacks from the bottom left.\nBOTTOM-RIGHT stacks from the bottom right.\nRANDOM drops each piece anywhere it fits.\nSMART FIT picks the spot that touches the most edges.\n\nSame pieces, same box. Only the strategy changes.\n\n#reels #asmr #simulation #visualization #coding #computerscience #oddlysatisfying #satisfying",
+    "reveal_comment": "Answer: SMART FIT won with 97.8% (BOTTOM-LEFT was 5.7% behind)"
+  },
+  {
+    "file": "ep04_luck-vs-strategy.mp4",
+    "episode": 4,
+    "concept": "Luck vs Strategy",
+    "theme": "CANDY",
+    "seed": 1400,
+    "strategies": [
+      "RANDOM",
+      "SMART FIT",
+      "BIGGEST FIRST",
+      "BEST COMBO"
+    ],
+    "winner": "BEST COMBO",
+    "winner_fill": 99.0,
+    "gap": 2.36,
+    "photo_finish": false,
+    "duration_s": 22.8,
+    "pieces": 80,
+    "tiktok_caption": "Can pure luck beat a real strategy? RANDOM, SMART FIT, BIGGEST FIRST, BEST COMBO. Pick one before the end #algorithm #puzzle #oddlysatisfying #fyp #coding",
+    "instagram_caption": "Can pure luck beat a real strategy?\n\nRANDOM drops each piece anywhere it fits.\nSMART FIT picks the spot that touches the most edges.\nBIGGEST FIRST places the biggest pieces first.\nBEST COMBO biggest pieces first, best-contact spot.\n\nSame pieces, same box. Only the strategy changes.\n\n#satisfying #algorithms #oddlysatisfying #coding #simulation #visualization #asmr #puzzle",
+    "reveal_comment": "Answer: BEST COMBO won with 99.0% (BIGGEST FIRST was 2.4% behind)"
+  },
+  {
+    "file": "ep05_mystery.mp4",
+    "episode": 5,
+    "concept": "Mystery Strategies",
+    "theme": "OCEAN",
+    "seed": 1500,
+    "strategies": [
+      "BOTTOM-RIGHT",
+      "SMART FIT",
+      "BOTTOM-LEFT",
+      "LONG FIRST"
+    ],
+    "winner": "LONG FIRST",
+    "winner_fill": 95.7,
+    "gap": 1.1,
+    "photo_finish": true,
+    "duration_s": 23.8,
+    "pieces": 88,
+    "tiktok_caption": "Which of A, B, C, D is the smartest strategy? Names revealed at the end. Pick one before the end #simulation #puzzle #coding #oddlysatisfying #fyp",
+    "instagram_caption": "Which of A, B, C, D is the smartest strategy?\n\nSame pieces, same box. Names revealed at the end.\n\n#satisfying #asmr #computerscience #coding #oddlysatisfying #visualization #algorithms #puzzle",
+    "reveal_comment": "Answer: D (LONG FIRST) won with 95.7% (SMART FIT was 1.1% behind). A = BOTTOM-RIGHT, B = SMART FIT, C = BOTTOM-LEFT, D = LONG FIRST"
+  },
+  {
+    "file": "ep06_giant-blocks.mp4",
+    "episode": 6,
+    "concept": "Giant Blocks",
+    "theme": "SUNSET",
+    "seed": 1600,
+    "strategies": [
+      "BIGGEST FIRST",
+      "SMALL FIRST",
+      "BOTTOM-LEFT",
+      "SMART FIT"
+    ],
+    "winner": "BIGGEST FIRST",
+    "winner_fill": 93.2,
+    "gap": 1.93,
+    "photo_finish": true,
+    "duration_s": 26.0,
+    "pieces": 34,
+    "tiktok_caption": "Only a few giant pieces. Who survives? BIGGEST FIRST, SMALL FIRST, BOTTOM-LEFT, SMART FIT. Pick one before the end #oddlysatisfying #satisfying #simulation #coding #fyp",
+    "instagram_caption": "Only a few giant pieces. Who survives?\n\nBIGGEST FIRST places the biggest pieces first.\nSMALL FIRST places the smallest pieces first.\nBOTTOM-LEFT stacks from the bottom left.\nSMART FIT picks the spot that touches the most edges.\n\nSame pieces, same box. Only the strategy changes.\n\n#algorithms #puzzle #reels #visualization #computerscience #oddlysatisfying #simulation #satisfying",
+    "reveal_comment": "Answer: BIGGEST FIRST won with 93.2% (SMART FIT was 1.9% behind)"
+  },
+  {
+    "file": "ep07_tiny-pieces.mp4",
+    "episode": 7,
+    "concept": "Tiny Pieces",
+    "theme": "CANDY",
+    "seed": 1700,
+    "strategies": [
+      "RANDOM",
+      "SMART FIT",
+      "BIGGEST FIRST",
+      "BOTTOM-LEFT"
+    ],
+    "winner": "SMART FIT",
+    "winner_fill": 98.4,
+    "gap": 0.71,
+    "photo_finish": true,
+    "duration_s": 24.4,
+    "pieces": 262,
+    "tiktok_caption": "Hundreds of tiny pieces. Who wins? RANDOM, SMART FIT, BIGGEST FIRST, BOTTOM-LEFT. Pick one before the end #coding #asmr #puzzle #fyp #algorithm",
+    "instagram_caption": "Hundreds of tiny pieces. Who wins?\n\nRANDOM drops each piece anywhere it fits.\nSMART FIT picks the spot that touches the most edges.\nBIGGEST FIRST places the biggest pieces first.\nBOTTOM-LEFT stacks from the bottom left.\n\nSame pieces, same box. Only the strategy changes.\n\n#visualization #asmr #simulation #satisfying #computerscience #puzzle #coding #reels",
+    "reveal_comment": "Answer: SMART FIT won with 98.4% (BIGGEST FIRST was 0.7% behind)"
+  },
+  {
+    "file": "ep08_photo-finish.mp4",
+    "episode": 8,
+    "concept": "Photo Finish",
+    "theme": "NEON",
+    "seed": 1818,
+    "strategies": [
+      "BIGGEST FIRST",
+      "SMALL FIRST",
+      "SMART FIT",
+      "BOTTOM-LEFT"
+    ],
+    "winner": "BIGGEST FIRST",
+    "winner_fill": 96.2,
+    "gap": 0.05,
+    "photo_finish": true,
+    "duration_s": 24.2,
+    "pieces": 78,
+    "tiktok_caption": "This one is decided by a few cells. Who wins? BIGGEST FIRST, SMALL FIRST, SMART FIT, BOTTOM-LEFT. Pick one before the end #simulation #coding #fyp #algorithm #satisfying",
+    "instagram_caption": "This one is decided by a few cells. Who wins?\n\nBIGGEST FIRST places the biggest pieces first.\nSMALL FIRST places the smallest pieces first.\nSMART FIT picks the spot that touches the most edges.\nBOTTOM-LEFT stacks from the bottom left.\n\nSame pieces, same box. Only the strategy changes.\n\n#simulation #puzzle #oddlysatisfying #satisfying #asmr #visualization #computerscience #reels",
+    "reveal_comment": "Answer: BIGGEST FIRST won with 96.2% (SMART FIT was 0.0% behind)"
+  },
+  {
+    "file": "ep09_rainbow.mp4",
+    "episode": 9,
+    "concept": "Rainbow Pieces",
+    "theme": "CANDY",
+    "seed": 1900,
+    "strategies": [
+      "RANDOM",
+      "BEST COMBO",
+      "LONG FIRST",
+      "SMALL FIRST"
+    ],
+    "winner": "BEST COMBO",
+    "winner_fill": 97.7,
+    "gap": 2.0,
+    "photo_finish": true,
+    "duration_s": 24.8,
+    "pieces": 74,
+    "tiktok_caption": "Colors show piece size. Which strategy packs best? RANDOM, BEST COMBO, LONG FIRST, SMALL FIRST. Pick one before the end #asmr #fyp #simulation #algorithm #satisfying",
+    "instagram_caption": "Colors show piece size. Which strategy packs best?\n\nRANDOM drops each piece anywhere it fits.\nBEST COMBO biggest pieces first, best-contact spot.\nLONG FIRST places the longest pieces first.\nSMALL FIRST places the smallest pieces first.\n\nSame pieces, same box. Only the strategy changes.\n\n#oddlysatisfying #coding #satisfying #asmr #simulation #visualization #computerscience #algorithms",
+    "reveal_comment": "Answer: BEST COMBO won with 97.7% (LONG FIRST was 2.0% behind)"
+  },
+  {
+    "file": "ep10_speedrun.mp4",
+    "episode": 10,
+    "concept": "Speedrun",
+    "theme": "OCEAN",
+    "seed": 2001,
+    "strategies": [
+      "LONG FIRST",
+      "SMALL FIRST",
+      "BOTTOM-RIGHT",
+      "BIGGEST FIRST"
+    ],
+    "winner": "LONG FIRST",
+    "winner_fill": 97.5,
+    "gap": 0.55,
+    "photo_finish": true,
+    "duration_s": 16.3,
+    "pieces": 66,
+    "tiktok_caption": "Quick race. Who wins? LONG FIRST, SMALL FIRST, BOTTOM-RIGHT, BIGGEST FIRST. Pick one before the end #puzzle #simulation #satisfying #oddlysatisfying #asmr",
+    "instagram_caption": "Quick race. Who wins?\n\nLONG FIRST places the longest pieces first.\nSMALL FIRST places the smallest pieces first.\nBOTTOM-RIGHT stacks from the bottom right.\nBIGGEST FIRST places the biggest pieces first.\n\nSame pieces, same box. Only the strategy changes.\n\n#asmr #simulation #satisfying #computerscience #puzzle #coding #oddlysatisfying #reels",
+    "reveal_comment": "Answer: LONG FIRST won with 97.5% (BIGGEST FIRST was 0.5% behind)"
+  }
+]
