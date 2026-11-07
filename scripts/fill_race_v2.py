@@ -51,6 +51,14 @@ MYSTERY = False                          # True : noms caches (A,B,C,D) puis rev
 COLOR_BY_SIZE = False                    # True : pieces colorees selon leur aire, pas selon la strategie
 RAINBOW = [(96, 165, 250), (45, 212, 191), (74, 222, 128), (250, 204, 21), (251, 146, 60), (244, 63, 94)]
 AREA_EDGES = (24, 48, 80, 120, 170)      # seuils d'aire -> 6 couleurs (petit -> grand)
+BRICKS = False                           # True : pas de musique, seulement des bruitages de briques (clac, tock, thump)
+MUSICAL = False                          # True : chaque piece joue une note (gamme pentatonique) + nappe + reverb
+BLOOM = False                            # True : halo lumineux sur les zones claires (look neon)
+MELODY = False                           # True : les pieces se posent sur les notes d'une melodie (fr_melody)
+MELODY_MODULE = "fr_melody"               # module qui fournit build(n) -> frames/midi/lh
+MELODY_DROP = 11                         # duree de chute constante en mode melodie (images)
+MAXFX = False                            # True : tous les effets a fond (onde de choc, etincelles, zoom, flash, confettis...)
+COLOR_FLOW = False                       # True : degrade de teintes autour de la couleur de la strategie, selon l'ordre d'arrivee
 
 
 def font(size):
@@ -112,6 +120,43 @@ class Bin:
         self.O[y:y + h, x:x + w] = 1
 
 
+_RANKS = {}
+LAZY_FRAC = 0.12                         # smart_lazy : part des emplacements examines
+
+
+def rank_grid(mode):
+    """Rang de chaque case : l'algo cherche a couvrir la case libre de plus petit rang.
+    spiral = de l'exterieur vers le centre (en tournant) ; explosion = du centre vers l'exterieur ;
+    columns = tour apres tour, de gauche a droite, de bas en haut."""
+    key = (mode, H_BIN, W_BIN)
+    if key in _RANKS:
+        return _RANKS[key]
+    H, W = H_BIN, W_BIN
+    R = np.zeros((H, W), np.int64)
+    if mode == "spiral":
+        order, y0, x0, y1, x1 = [], 0, 0, H - 1, W - 1
+        while y0 <= y1 and x0 <= x1:
+            order += [(y0, x) for x in range(x0, x1 + 1)]
+            order += [(y, x1) for y in range(y0 + 1, y1 + 1)]
+            if y1 > y0:
+                order += [(y1, x) for x in range(x1 - 1, x0 - 1, -1)]
+            if x1 > x0:
+                order += [(y, x0) for y in range(y1 - 1, y0, -1)]
+            y0, x0, y1, x1 = y0 + 1, x0 + 1, y1 - 1, x1 - 1
+        for i, (y, x) in enumerate(order):
+            R[y, x] = i
+    elif mode == "explosion":
+        yy, xx = np.mgrid[0:H, 0:W]
+        cy, cx = (H - 1) / 2, (W - 1) / 2
+        d = np.hypot((yy - cy), (xx - cx)) + 0.001 * np.arctan2(yy - cy, xx - cx)
+        R[:] = np.argsort(np.argsort(d.ravel())).reshape(H, W)
+    else:                                                 # columns
+        yy, xx = np.mgrid[0:H, 0:W]
+        R[:] = xx * H + (H - 1 - yy)
+    _RANKS[key] = R
+    return R
+
+
 def place(b, w, h, mode, rng):
     orient = [(w, h)] if w == h else [(w, h), (h, w)]
     cands = []
@@ -121,6 +166,32 @@ def place(b, w, h, mode, rng):
             cands.append((v[0], v[1], ww, hh))
     if not cands:
         return None
+    if mode in ("smart_lazy", "smart_norot"):             # smart fit handicape : vue partielle / sans rotation
+        if mode == "smart_norot":
+            cands = cands[:1]
+        best, res = None, None
+        for ys, xs, ww, hh in cands:
+            if mode == "smart_lazy" and len(ys) > 8:
+                keep = rng.random(len(ys)) < LAZY_FRAC
+                if keep.sum() >= 1:
+                    ys, xs = ys[keep], xs[keep]
+            score = (ys + hh).astype(np.int64) * 100 + (W_BIN - xs) + b.contact(ys, xs, ww, hh).astype(np.int64) * 10000
+            k = int(np.argmax(score))
+            if best is None or score[k] > best:
+                best, res = score[k], (int(xs[k]), int(ys[k]), ww, hh)
+        b.put(*res)
+        return res
+    if mode in ("spiral", "explosion", "columns"):
+        R = np.where(b.O > 0, 10 ** 9, rank_grid(mode))
+        best, res = None, None
+        for ys, xs, ww, hh in cands:
+            mr = np.lib.stride_tricks.sliding_window_view(R, (hh, ww)).min(axis=(2, 3))[ys, xs]
+            score = -mr * 1000 + (b.contact(ys, xs, ww, hh) if mode != "columns" else 0)
+            k = int(np.argmax(score))
+            if best is None or score[k] > best:
+                best, res = score[k], (int(xs[k]), int(ys[k]), ww, hh)
+        b.put(*res)
+        return res
     if mode == "random":
         ys, xs, ww, hh = cands[int(rng.integers(len(cands)))]
         k = int(rng.integers(len(ys)))
@@ -186,6 +257,10 @@ class Renderer:
         self.contours = cv2.findContours(self.maskpx.astype(np.uint8) * 255, cv2.RETR_LIST,
                                          cv2.CHAIN_APPROX_NONE)[-2]
         self.starts = np.array([PLACE_FRAMES * (i / n) ** 0.8 for i in range(n)])
+        if MELODY:                                        # atterrissage exactement sur les notes
+            import importlib
+            self.mel = importlib.import_module(MELODY_MODULE).build(n)
+            self.starts = self.mel["frames"] - MELODY_DROP
         rng = np.random.default_rng(99)
         self.colors = [[tuple(int(c * rng.uniform(0.68, 1.0)) for c in st[1]) for _ in range(n)]
                        for st in STRATS]
@@ -195,6 +270,14 @@ class Renderer:
                     if r:
                         k = int(np.searchsorted(AREA_EDGES, r[2] * r[3], side="right"))
                         self.colors[s][j] = tuple(int(c * rng.uniform(0.82, 1.0)) for c in RAINBOW[k])
+        if COLOR_FLOW:
+            for s, plan in enumerate(self.plans):
+                h0 = int(cv2.cvtColor(np.uint8([[STRATS[s][1]]]), cv2.COLOR_RGB2HSV)[0, 0, 0])
+                for j in range(n):
+                    h = (h0 + (j / n - 0.5) * 46) % 180
+                    c = cv2.cvtColor(np.uint8([[[int(h), int(0.78 * 255), int(rng.uniform(0.9, 1.0) * 255)]]]),
+                                     cv2.COLOR_HSV2RGB)[0, 0]
+                    self.colors[s][j] = tuple(int(v) for v in c)
         self.pdata = np.zeros((S, n, NP, 4))
         self.pdata[..., 0] = rng.uniform(0.05, 0.95, (S, n, NP))
         self.pdata[..., 1] = rng.uniform(-2.4, 2.4, (S, n, NP))
@@ -214,7 +297,7 @@ class Renderer:
                 x, y, w, h = r
                 D = (y + h) * CELL
                 self.D[s, j] = D
-                self.drop[s, j] = 5 + 9 * D / ((H_BIN + 12) * CELL)
+                self.drop[s, j] = MELODY_DROP if MELODY else 5 + 9 * D / ((H_BIN + 12) * CELL)
                 self.land[s, j] = self.starts[j] + self.drop[s, j]
                 self.done[s, j] = self.land[s, j] + PL
                 items.append((self.land[s, j], w * h, D))
@@ -247,6 +330,17 @@ class Renderer:
         self.Fcum = np.concatenate([[0], np.cumsum(np.diff(self.tau_grid) / rate[:-1])])
         self.total_out = int(np.floor(self.Fcum[-1]))
 
+        if MAXFX:                                         # donnees des effets
+            amax = max(r[2] * r[3] for p in self.plans for r in p if r)
+            self.wt = np.array([[(r[2] * r[3] / amax) ** 0.5 if r else 0.0 for r in p] for p in self.plans])
+            self.xang = rng.uniform(-np.pi * 0.95, -np.pi * 0.05, (S, n, 12))
+            self.xspd = rng.uniform(3, 9, (S, n, 12))
+            self.cang = rng.uniform(0, 2 * np.pi, 90)
+            self.cspd = rng.uniform(4, 13, 90)
+            self.cdel = rng.integers(0, 24, 90)
+            self.ccol = [tuple(int(v) for v in cv2.cvtColor(np.uint8([[[int(rng.uniform(0, 180)), 120, 255]]]),
+                                                          cv2.COLOR_HSV2RGB)[0, 0]) for _ in range(90)]
+            self._shake = np.zeros(2)
         self.static = [self.panel_base() for _ in STRATS]
         self.baked = [0] * S
         self.f_title, self.f_sub = font(70), font(32)
@@ -366,6 +460,54 @@ class Renderer:
                                            int(ty1 + vy * b + 0.175 * b * b)), int(round(rad)), spark, -1)
         return panel
 
+    def pulse_at(self, s, tau):
+        m = (self.land[s] <= tau) & (self.land[s] > tau - 20)
+        return float((self.wt[s][m] * np.exp(-(tau - self.land[s][m]) / 6.0)).sum())
+
+    def make_fx(self, tau):
+        """Couche d'effets plein ecran : onde de choc + etincelles a chaque impact, confettis a la fin."""
+        fx = np.zeros((VH, VW, 3), np.uint8)
+        shake = np.zeros(2)
+        for s in range(len(STRATS)):
+            idx = np.where((self.land[s] <= tau) & (self.land[s] > tau - 20))[0]
+            for j in idx:
+                r = self.plans[s][j]
+                if not r:
+                    continue
+                x, y, w, h = r
+                age = tau - self.land[s, j]
+                gx = PX[s % 2] + (x + w / 2) * CELL
+                gy = PY[s // 2] + (y + h) * CELL
+                col = self.colors[s][j]
+                wt = self.wt[s, j]
+                if age < 14:
+                    cv2.circle(fx, (int(gx), int(gy - h * CELL / 2)), int(8 + age * (3 + 7 * wt)),
+                               tuple(int(c * (1 - age / 14) * 0.85) for c in col), 2)
+                for k in range(12):
+                    a, sp = self.xang[s, j, k], self.xspd[s, j, k]
+                    px = gx + np.cos(a) * sp * age
+                    py = gy + np.sin(a) * sp * age + 0.4 * age * age
+                    cv2.circle(fx, (int(px), int(py)), max(1, int(3.5 * (1 - age / 20))),
+                               tuple(int(c * (1 - age / 22)) for c in mix(col, 0.45)), -1)
+                if age < 5:
+                    ang = (j * 2.399 + s) % (2 * np.pi)
+                    shake += wt * np.exp(-age / 2.0) * 1.6 * np.array([np.cos(ang), np.sin(ang)])
+        self._shake = np.clip(shake, -6, 6)
+        if tau >= self.END:                               # confettis depuis le panneau gagnant
+            wn = self.winner
+            ox, oy = PX[wn % 2] + PW / 2, PY[wn // 2] + PH / 2
+            for i in range(90):
+                ta = tau - self.END - self.cdel[i]
+                if ta < 0 or ta > 70:
+                    continue
+                px = ox + np.cos(self.cang[i]) * self.cspd[i] * ta * 0.9
+                py = oy + np.sin(self.cang[i]) * self.cspd[i] * ta * 0.9 + 0.1 * ta * ta
+                if 0 <= px < VW and 0 <= py < VH:
+                    tw = 0.5 + 0.5 * np.sin(ta * 0.6 + i)
+                    cv2.circle(fx, (int(px), int(py)), 2 + int(3 * tw),
+                               tuple(int(c * (1 - ta / 72)) for c in self.ccol[i]), -1)
+        return fx
+
     def compose(self, tau, F):
         rp = float(np.clip((tau - self.hold_end) / RESET_FRAMES, 0, 1))
         end_raw = float(np.clip((tau - self.END) / 15, 0, 1))
@@ -377,7 +519,7 @@ class Renderer:
             if end_t > 0 and s != self.winner:
                 panel = (panel * (1 - 0.55 * end_t)).astype(np.uint8)
             thick = 2 + (int(5 * end_t) if s == self.winner else 0)
-            self.outline(panel, col, thick)
+            self.outline(panel, mix(col, min(0.7, 0.9 * self.pulse_at(s, tau))) if MAXFX else col, thick)
             x0, y0 = PX[s % 2], PY[s // 2]
             frame[y0:y0 + PH, x0:x0 + PW] = panel
             fill = self.fill_at(s, tau) * (1 - rp)
@@ -401,6 +543,8 @@ class Renderer:
             reg = frame[gy:gy + layer.shape[0], gx:gx + layer.shape[1]]
             frame[gy:gy + layer.shape[0], gx:gx + layer.shape[1]] = cv2.add(reg, (layer * k).astype(np.uint8))
 
+        if MAXFX:
+            frame = cv2.add(frame, self.make_fx(tau))
         img = Image.fromarray(frame)
         d = ImageDraw.Draw(img)
         for s in range(len(STRATS)):
@@ -437,19 +581,225 @@ class Renderer:
         else:
             d.text(pos, SUB, font=self.f_sub, fill=GREY, anchor="mm")
         arr = np.array(img)
+        if MAXFX and tau >= self.END:                     # flash blanc + aberration chromatique a la victoire
+            ff = np.exp(-(tau - self.END) / 7.0)
+            if ff > 0.02:
+                arr = cv2.add(arr, np.full_like(arr, int(60 * ff)))
+                sft = int(6 * ff)
+                if sft:
+                    arr[..., 0] = np.roll(arr[..., 0], sft, axis=1)
+                    arr[..., 2] = np.roll(arr[..., 2], -sft, axis=1)
+        if BLOOM:                                         # halo : on ne floute que les zones claires
+            small = cv2.resize(arr, (VW // 4, VH // 4), interpolation=cv2.INTER_AREA)
+            br = np.clip(small.astype(np.int16) - (60 if MAXFX else 70), 0, 255).astype(np.uint8)
+            glow = cv2.resize(cv2.GaussianBlur(br, (0, 0), 6), (VW, VH), interpolation=cv2.INTER_LINEAR)
+            arr = cv2.add(arr, (glow * (1.5 if MAXFX else 1.1)).clip(0, 255).astype(np.uint8))
         z = self.zoom_at(tau)
-        if z > 1.0005:                                    # zoom doux entre les deux leaders
-            cs = [(PX[s % 2] + PW / 2, PY[s // 2] + PH / 2) for s in self.top2]
-            cx = 0.5 * sum(c[0] for c in cs) / 2 + 0.5 * VW / 2      # centre tire vers le milieu de l'ecran
-            cy = 0.5 * sum(c[1] for c in cs) / 2 + 0.5 * VH / 2
-            M = np.array([[z, 0, cx * (1 - z)], [0, z, cy * (1 - z)]], np.float32)
+        sh = np.zeros(2)
+        if MAXFX:                                         # zoom qui monte + coup de zoom a la victoire + tremblement
+            push = 0.045 * float(smooth(tau / self.END)) * (1 - float(smooth((tau - self.hold_end) / RESET_FRAMES)))
+            punch = 0.03 * np.exp(-(tau - self.END) / 9.0) if tau >= self.END else 0.0
+            z = min(z * (1 + push + punch), 1.07)         # plafond : le titre reste entier a l'ecran
+            sh = self._shake * (1 - rp)
+        if z > 1.0005 or abs(sh[0]) + abs(sh[1]) > 0.2:
+            if MAXFX and not self.photo:
+                cx, cy = VW / 2, VH / 2
+            else:                                         # zoom doux entre les deux leaders
+                cs = [(PX[s % 2] + PW / 2, PY[s // 2] + PH / 2) for s in self.top2]
+                cx = 0.5 * sum(c[0] for c in cs) / 2 + 0.5 * VW / 2      # centre tire vers le milieu de l'ecran
+                cy = 0.5 * sum(c[1] for c in cs) / 2 + 0.5 * VH / 2
+            M = np.array([[z, 0, cx * (1 - z) + sh[0]], [0, z, cy * (1 - z) + sh[1]]], np.float32)
             arr = cv2.warpAffine(arr, M, (VW, VH), flags=cv2.INTER_LINEAR,
                                  borderMode=cv2.BORDER_CONSTANT, borderValue=BG)
         return arr
 
 
 # ---------- son ----------
+def synth_musical(r, sr=44100):
+    import fr_music as fm
+    rng = np.random.default_rng(5)
+    n = int((r.total_out / FPS + 1.5) * sr)
+    a = np.zeros(n, np.float32)
+
+    def add(sig, t0, gain=1.0):
+        st = int(t0 * sr)
+        if 0 <= st < n:
+            seg = (sig * gain).astype(np.float32)
+            a[st:st + len(seg)] += seg[:n - st]
+
+    tt = np.arange(int(0.12 * sr)) / sr
+    tick = np.sin(2 * np.pi * (70 * tt + 90 * (1 - np.exp(-45 * tt)) / 45)) * np.exp(-tt * 40)
+    dens = min(1.0, (90 / r.n) ** 0.5)
+    tx = np.arange(int(0.4 * sr)) / sr
+    thump_x = np.sin(2 * np.pi * (48 * tx + 60 * (1 - np.exp(-30 * tx)) / 30)) * np.exp(-tx * 12)
+    cache = {}
+    t_end, t_hold = r.tf(r.END), r.tf(r.hold_end)
+    for s in range(len(STRATS)):
+        lands, frac, Ds = r.ev[s]
+        prev = 0.0
+        for m in range(len(lands)):
+            t0 = r.tf(lands[m])
+            area = max(1.0, (frac[m] - prev) * CAP)
+            prev = frac[m]
+            if MELODY:                                    # la melodie est jouee a part : ici, juste le contact
+                add(tick, t0, 0.03 * dens)
+                if area >= 60:
+                    add(thump_x, t0, 0.05 * dens)
+                continue
+            if MAXFX:                                     # la melodie monte avec le remplissage : le leader joue plus haut
+                k = int(min(1.0, frac[m] / 0.95) * 16)
+                for kx, g in ((k, 0.085), (k + 5, 0.03)):
+                    if kx not in cache:
+                        cache[kx] = fm.pluck(fm.ladder_freq(kx), sr, 1.2)
+                    add(cache[kx], t0, g * dens)
+                if area >= 60:
+                    add(thump_x, t0, 0.07 * dens)
+                continue
+            k = fm.area_to_k(area)
+            if k not in cache:
+                cache[k] = fm.pluck(fm.ladder_freq(k), sr)
+            add(tick, t0, 0.05 * dens)
+            add(cache[k], t0, 0.10 * dens * (0.8 + 0.2 * (s % 2)))
+        for thr, kk in (() if MELODY else ((0.90, 15), (0.95, 17))):
+            j = int(np.searchsorted(frac, thr, side="left"))
+            if j < len(lands):
+                add(fm.bell(fm.ladder_freq(kk), sr), r.tf(lands[j]), 0.08)
+    if MELODY:                                            # voix principale : une note par piece posee
+        mel, pc = r.mel, {}
+        for j in range(r.n):
+            if not any(r.plans[s][j] for s in range(len(STRATS))):
+                continue
+            m = mel["midi"][j]
+            if m not in pc:
+                pc[m] = fm.pluck(fm.midi_freq(m) if hasattr(fm, "midi_freq") else 440.0, sr, 1.5, 1.2)
+            add(pc[m], r.tf(r.starts[j] + MELODY_DROP), 0.30)
+        for f, m in mel["lh"]:
+            if m not in pc:
+                pc[m] = fm.pluck(fm.midi_freq(m), sr, 1.4, 0.8)
+            add(pc[m], r.tf(f), 0.17)
+    if r.photo:
+        th = np.arange(int(0.22 * sr)) / sr
+        beat = np.sin(2 * np.pi * 55 * th) * np.exp(-th * 22)
+        t = r.tf(r.f_slow)
+        while t < t_end:
+            add(beat, t, 0.12)
+            add(beat, t + 0.2, 0.08)
+            t += 0.62
+    if MAXFX:                                             # montee, explosion, accord, scintillements
+        rd = 2.2
+        tw = np.arange(int(rd * sr)) / sr
+        env = (tw / rd) ** 2.2
+        ph = 2 * np.pi * np.cumsum(180 * (1 + 9 * (tw / rd) ** 2)) / sr
+        nz = np.convolve(rng.standard_normal(len(tw)), np.ones(10) / 10, mode="same")
+        add((np.sin(ph) * 0.8 + nz * 0.6) * env, t_end - rd, 0.2)
+        tb = np.arange(int(2.2 * sr)) / sr
+        add(np.sin(2 * np.pi * (46 * tb + 90 * (1 - np.exp(-6 * tb)) / 6)) * np.exp(-tb * 1.6), t_end, 0.5)
+        for i, k in enumerate((5, 7, 9, 12, 14, 16)):
+            add(fm.bell(fm.ladder_freq(k), sr, 3.2), t_end + 0.035 * i, 0.13)
+        for _ in range(24):
+            add(fm.bell(fm.ladder_freq(int(rng.integers(14, 20))), sr, 1.2), t_end + 0.2 + rng.uniform(0, 2.4), 0.04)
+    else:
+        for i, k in enumerate((5, 7, 9, 10, 12, 14)):           # arpege du gagnant
+            add(fm.bell(fm.ladder_freq(k), sr, 2.2), t_end + 0.09 * i, 0.12)
+    dur = r.total_out / FPS + 1.5
+    lv = [0.05, 0.11, 0.17, 0.12, 0.0] if MAXFX else [0.03, 0.05, 0.08, 0.08, 0.0]
+    a += fm.pad(sr, dur, [0, t_end * 0.5, t_end, t_hold, dur], lv) * (0.75 if MAXFX else 0.6)
+    dr = RESET_FRAMES / FPS
+    tw = np.arange(int(dr * sr)) / sr
+    win = np.sin(np.pi * tw / dr) ** 2
+    noise = np.convolve(rng.standard_normal(len(tw)), np.ones(24) / 24, mode="same")
+    add(noise * win, t_hold, 0.12)
+    a = fm.reverb(a, sr, 2.0, 0.36) if MAXFX else fm.reverb(a, sr)
+    if MAXFX:
+        a = np.tanh(a * 1.8 / max(1e-6, float(np.abs(a).max())))
+    a *= 0.88 / max(1e-6, float(np.abs(a).max()))
+    fade = int(0.05 * sr)
+    a[-fade:] *= np.linspace(1, 0, fade)
+    return (a * 32767).astype(np.int16), sr
+
+
+def synth_bricks(r, sr=44100):
+    """Bruitages de briques : un 'tock' plastique par piece (petite = aigu et sec, grosse = grave et rond),
+    thump pour les grosses, claquement final, montee + boom avant le resultat. Aucune note de musique."""
+    from scipy.signal import butter, sosfilt
+    import fr_music as fm
+    rng = np.random.default_rng(5)
+    n = int((r.total_out / FPS + 1.5) * sr)
+    a = np.zeros(n, np.float32)
+
+    def add(sig, t0, gain=1.0):
+        st = int(t0 * sr)
+        if 0 <= st < n:
+            seg = (sig * gain).astype(np.float32)
+            a[st:st + len(seg)] += seg[:n - st]
+
+    sos = butter(2, [1800, 7000], btype="bandpass", fs=sr, output="sos")
+    cache = {}
+
+    def brick(area, var):
+        key = (int(np.clip(round(np.log2(max(area, 3)) * 2), 0, 16)), var)
+        if key in cache:
+            return cache[key]
+        f = float(np.clip(2300 * (max(area, 3) / 6.0) ** -0.40, 230, 3000)) * (1 + 0.05 * (var - 1))
+        t = np.arange(int(0.22 * sr)) / sr
+        dec = float(np.clip(70 - 8 * np.log2(max(area, 3)), 28, 62))
+        body = np.sin(2 * np.pi * f * t) * np.exp(-t * dec) + 0.45 * np.sin(2 * np.pi * f * 2.41 * t) * np.exp(-t * dec * 1.7)
+        click = sosfilt(sos, np.random.default_rng(key[0] * 7 + var).standard_normal(len(t))) * np.exp(-t * 520)
+        sig = body * 1.0 + click * 0.6
+        if area >= 40:                                    # grosse brique : petit thump grave
+            sig = sig + np.sin(2 * np.pi * (75 * t + 55 * (1 - np.exp(-30 * t)) / 30)) * np.exp(-t * 16) * min(1.2, area / 90)
+        sig = sig * (1 - np.exp(-t * 4000))
+        cache[key] = sig.astype(np.float32)
+        return cache[key]
+
+    dens = min(1.0, (90 / r.n) ** 0.5)
+    t_end, t_hold = r.tf(r.END), r.tf(r.hold_end)
+    for s_i in range(len(STRATS)):
+        lands, frac, Ds = r.ev[s_i]
+        prev = 0.0
+        for m in range(len(lands)):
+            t0 = r.tf(lands[m])
+            area = max(1.0, (frac[m] - prev) * CAP)
+            prev = frac[m]
+            vel = 0.55 + 0.45 * min(1.0, Ds[m] / ((H_BIN + 12) * CELL))
+            add(brick(area, int(rng.integers(0, 3))), t0, 0.24 * vel * dens)
+    if r.photo:
+        th = np.arange(int(0.22 * sr)) / sr
+        beat = np.sin(2 * np.pi * 55 * th) * np.exp(-th * 22)
+        t = r.tf(r.f_slow)
+        while t < t_end:
+            add(beat, t, 0.14)
+            add(beat, t + 0.2, 0.09)
+            t += 0.62
+    rd = 2.2                                              # montee de tension (bruit + sifflement), puis boom
+    tw = np.arange(int(rd * sr)) / sr
+    env = (tw / rd) ** 2.2
+    ph = 2 * np.pi * np.cumsum(180 * (1 + 9 * (tw / rd) ** 2)) / sr
+    nz = np.convolve(rng.standard_normal(len(tw)), np.ones(10) / 10, mode="same")
+    add((np.sin(ph) * 0.6 + nz * 0.7) * env, t_end - rd, 0.13)
+    tb = np.arange(int(2.0 * sr)) / sr
+    add(np.sin(2 * np.pi * (46 * tb + 90 * (1 - np.exp(-6 * tb)) / 6)) * np.exp(-tb * 1.8), t_end, 0.4)
+    for i in range(36):                                   # pluie de briques qui retombent apres l'explosion
+        tt0 = t_end + 0.04 + (i / 36) ** 1.5 * 1.6 + rng.uniform(0, 0.03)
+        add(brick(float(rng.choice([4, 6, 9, 16, 30, 60])), int(rng.integers(0, 3))), tt0, 0.22 * (1 - 0.6 * i / 36))
+    dr = RESET_FRAMES / FPS
+    tw = np.arange(int(dr * sr)) / sr
+    win = np.sin(np.pi * tw / dr) ** 2
+    noise = np.convolve(rng.standard_normal(len(tw)), np.ones(24) / 24, mode="same")
+    add(noise * win, t_hold, 0.14)
+    a = fm.reverb(a, sr, 0.7, 0.16)
+    a = np.tanh(a * 3.2 / max(1e-6, float(np.abs(a).max())))
+    a *= 0.88 / max(1e-6, float(np.abs(a).max()))
+    fade = int(0.05 * sr)
+    a[-fade:] *= np.linspace(1, 0, fade)
+    return (a * 32767).astype(np.int16), sr
+
+
 def synth(r, sr=44100):
+    if BRICKS:
+        return synth_bricks(r, sr)
+    if MUSICAL:
+        return synth_musical(r, sr)
     rng = np.random.default_rng(5)
     n = int((r.total_out / FPS + 1.5) * sr)
     a = np.zeros(n, np.float32)
