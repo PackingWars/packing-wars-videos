@@ -110,6 +110,7 @@ START = 0            # indice de la premiere note de la main droite a jouer
 FPS = 30.0           # images d'animation par seconde
 TARGET_SEC = 19.0    # duree visee de la phase de pose
 KEEP_LH = True
+STEADY_FRAMES = 0     # >0 : une note toutes les N images, sans les pauses du MIDI
 SPEED = None         # si fixe : facteur de tempo impose (1.0 = tempo du MIDI), sinon deduit de TARGET_SEC
 _cache = {}
 
@@ -118,8 +119,9 @@ def _load():
     if "d" not in _cache:
         div, tempos, tracks = parse(PATH)
         f = tick_to_sec(tempos, div)
-        rh = [(f(t), f(t + d) - f(t), p) for t, d, p, v in monophonic(tracks[1]["notes"])]
-        lh = [(f(t), p) for t, d, p, v in tracks[2]["notes"]] if len(tracks) > 2 else []
+        tr = sorted([t for t in tracks if t["notes"]], key=lambda t: -np.mean([n[2] for n in t["notes"]]))
+        rh = [(f(t), f(t + d) - f(t), p) for t, d, p, v in monophonic(tr[0]["notes"])]   # piste la plus aigue = melodie
+        lh = [(f(t), p) for t, d, p, v in tr[1]["notes"]] if len(tr) > 1 else []
         _cache["d"] = (rh, lh)
     return _cache["d"]
 
@@ -131,6 +133,12 @@ def build(n, offset=14):
     span = max(0.5, seq[-1][0] - t0)
     speed = SPEED or span / TARGET_SEC              # >1 : on accelere
     frames = np.array([offset + (t - t0) / speed * FPS for t, _, _ in seq], float)
+    if STEADY_FRAMES:
+        orig = np.array([t for t, _, _ in seq])
+        frames = offset + np.arange(n) * float(STEADY_FRAMES)
+        last = frames[-1]
+        lhs = [(float(np.interp(t, orig, frames)), p) for t, p in lh if seq[0][0] <= t <= seq[-1][0]] if KEEP_LH else []
+        return {"frames": frames, "midi": [p for _, _, p in seq], "lh": lhs}
     midi = [p for _, _, p in seq]
     last = frames[-1]
     out = []

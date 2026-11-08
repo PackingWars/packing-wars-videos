@@ -121,6 +121,7 @@ class Bin:
 
 
 _RANKS = {}
+TETRIS_K = 4                              # tetris : nombre de colonnes essayees au hasard
 LAZY_FRAC = 0.12                         # smart_lazy : part des emplacements examines
 
 
@@ -166,6 +167,29 @@ def place(b, w, h, mode, rng):
             cands.append((v[0], v[1], ww, hh))
     if not cands:
         return None
+    if mode == "tetris":                                   # tombe tout droit dans une colonne au hasard
+        H, W = b.O.shape
+        occ = b.O > 0
+        topm = np.where(occ.any(0), occ.argmax(0), H)
+        best = None
+        for _ in range(60):                                # TETRIS_K essais au hasard, garde celui qui tombe le plus bas
+            ww, hh = orient[int(rng.integers(0, len(orient)))]
+            if ww > W:
+                continue
+            x = int(rng.integers(0, W - ww + 1))
+            y = int(topm[x:x + ww].min()) - hh
+            if y >= 0 and not occ[y:y + hh, x:x + ww].any():
+                if best is None or y + hh > best[1] + best[3]:
+                    best = (x, y, ww, hh)
+                tries = getattr(place, "_k", 0) + 1
+                place._k = tries
+                if tries >= TETRIS_K:
+                    break
+        place._k = 0
+        if best is None:
+            return None
+        b.put(*best)
+        return best
     if mode in ("smart_lazy", "smart_norot"):             # smart fit handicape : vue partielle / sans rotation
         if mode == "smart_norot":
             cands = cands[:1]
