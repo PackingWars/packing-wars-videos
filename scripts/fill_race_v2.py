@@ -55,6 +55,7 @@ BRICKS = False                           # True : pas de musique, seulement des 
 MUSICAL = False                          # True : chaque piece joue une note (gamme pentatonique) + nappe + reverb
 BLOOM = False                            # True : halo lumineux sur les zones claires (look neon)
 MELODY = False                           # True : les pieces se posent sur les notes d'une melodie (fr_melody)
+SPEEDS = None                             # vitesse propre a chaque algo (ex [1.6, 1.2, 1.0, 0.8]) : course asynchrone
 MELODY_MODULE = "fr_melody"               # module qui fournit build(n) -> frames/midi/lh
 MELODY_DROP = 11                         # duree de chute constante en mode melodie (images)
 MAXFX = False                            # True : tous les effets a fond (onde de choc, etincelles, zoom, flash, confettis...)
@@ -285,6 +286,8 @@ class Renderer:
             import importlib
             self.mel = importlib.import_module(MELODY_MODULE).build(n)
             self.starts = self.mel["frames"] - MELODY_DROP
+        self.st = np.stack([self.starts[0] + (self.starts - self.starts[0]) / (SPEEDS[k] if SPEEDS else 1.0)
+                            for k in range(S)])
         rng = np.random.default_rng(99)
         self.colors = [[tuple(int(c * rng.uniform(0.68, 1.0)) for c in st[1]) for _ in range(n)]
                        for st in STRATS]
@@ -316,13 +319,13 @@ class Renderer:
             items = []
             for j, r in enumerate(plan):
                 if r is None:
-                    self.land[s, j] = self.done[s, j] = self.starts[j]
+                    self.land[s, j] = self.done[s, j] = self.st[s, j]
                     continue
                 x, y, w, h = r
                 D = (y + h) * CELL
                 self.D[s, j] = D
                 self.drop[s, j] = MELODY_DROP if MELODY else 5 + 9 * D / ((H_BIN + 12) * CELL)
-                self.land[s, j] = self.starts[j] + self.drop[s, j]
+                self.land[s, j] = self.st[s, j] + self.drop[s, j]
                 self.done[s, j] = self.land[s, j] + PL
                 items.append((self.land[s, j], w * h, D))
             items.sort()
@@ -342,7 +345,9 @@ class Renderer:
         self.END = float(self.done.max()) + 4
         self.hold_end = self.END + HOLD_FRAMES
         self.T = self.hold_end + RESET_FRAMES + 2
-        self.f_slow = float(self.starts[max(0, n - SLOW_K)])
+        self.f_slow = float(self.st[:, max(0, n - SLOW_K)].max())
+        self.finish = self.done.max(1)
+        self.rank = {int(k): i + 1 for i, k in enumerate(np.argsort(self.finish))}
         self.f_slow_end = float(self.land.max()) + 2
         # ralenti : relation temps d'animation <-> image de sortie
         self.tau_grid = np.linspace(0, self.T, int(self.T / 0.02) + 1)
@@ -449,7 +454,7 @@ class Renderer:
             p += 1
         self.baked[s] = p
         panel = self.static[s].copy()
-        hi = int(np.searchsorted(self.starts, tau, side="right"))
+        hi = int(np.searchsorted(self.st[s], tau, side="right"))
         col = STRATS[s][1]
         for j in range(p, hi):
             r = plan[j]
@@ -459,7 +464,7 @@ class Renderer:
             c = self.colors[s][j]
             tx0, ty0, tx1, ty1 = x * CELL, y * CELL, (x + w) * CELL, (y + h) * CELL
             cx, hw, ph = (tx0 + tx1) / 2, (tx1 - tx0) / 2, ty1 - ty0
-            a, dr = tau - self.starts[j], self.drop[s, j]
+            a, dr = tau - self.st[s, j], self.drop[s, j]
             if a < dr:                                    # chute
                 u = a / dr
                 sx, sy = 1 - 0.03 * u, 1 + 0.08 * u
@@ -576,6 +581,12 @@ class Renderer:
             d.text((PX[s % 2] + PW, PY[s // 2] - 30), pct, font=self.f_pct, fill=(235, 235, 240), anchor="rm")
             d.text((BAR_X1 + 15, BAR_Y0 + s * BAR_STEP + BAR_H // 2), pct, font=self.f_bar,
                    fill=(200, 200, 210), anchor="lm")
+            if SPEEDS and rp == 0 and tau >= self.finish[s]:      # badge d'arrivee : 1st / 2nd / 3rd / 4th DONE
+                rk = self.rank[s]
+                lab = {1: "1ST DONE", 2: "2ND DONE", 3: "3RD DONE", 4: "4TH DONE"}[rk]
+                k = min(1.0, (tau - self.finish[s]) / 6)
+                c = tuple(int(b * (1 - k) + v * k) for b, v in zip(BG, (255, 214, 90) if rk == 1 else (215, 215, 225)))
+                d.text((PX[s % 2] + PW // 2, PY[s // 2] + PH + 26), lab, font=self.f_bar, fill=c, anchor="mm")
         if MYSTERY:                                       # lettres A-D qui laissent place aux noms a la fin
             k = float(smooth(end_t * 1.5))
             for s, (name, col, _, _) in enumerate(STRATS):
