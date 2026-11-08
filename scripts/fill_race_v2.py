@@ -55,6 +55,7 @@ BRICKS = False                           # True : pas de musique, seulement des 
 MUSICAL = False                          # True : chaque piece joue une note (gamme pentatonique) + nappe + reverb
 BLOOM = False                            # True : halo lumineux sur les zones claires (look neon)
 MELODY = False                           # True : les pieces se posent sur les notes d'une melodie (fr_melody)
+ENDING = None                             # "fall" : les boites perdantes se vident, leurs pieces tombent
 SPEEDS = None                             # vitesse propre a chaque algo (ex [1.6, 1.2, 1.0, 0.8]) : course asynchrone
 MELODY_MODULE = "fr_melody"               # module qui fournit build(n) -> frames/midi/lh
 MELODY_DROP = 11                         # duree de chute constante en mode melodie (images)
@@ -424,6 +425,12 @@ class Renderer:
         k = int(np.searchsorted(self.lands_sorted[s], tau, side="right"))
         return self.cum_sorted[s][k] / CAP * 100
 
+    def fall_t0(self, s, j):
+        """Instant (image) ou la piece j d'une boite perdante commence a tomber : du bas vers le haut, en cascade."""
+        x, y, w, h = self.plans[s][j]
+        k = 1 - (y + h) / H_BIN
+        return self.END + 12 + 34 * k + 6 * ((j * 37 + s * 11) % 10) / 10
+
     def zoom_at(self, tau):
         if not self.photo:
             return 1.0
@@ -432,6 +439,22 @@ class Renderer:
     # un panneau
     def panel_img(self, s, tau, rp):
         plan, n = self.plans[s], self.n
+        if ENDING == "fall" and s != self.winner and tau > self.END + 10:
+            panel = self.panel_base()
+            if rp > 0:
+                return panel
+            for j, r in enumerate(plan):
+                if not r:
+                    continue
+                x, y, w, h = r
+                t0 = self.fall_t0(s, j)
+                a = max(0.0, tau - t0)
+                top = y * CELL + 0.9 * a * a
+                if top > PH:
+                    continue
+                draw_rect(panel, x * CELL, top, (x + w) * CELL, top + h * CELL,
+                          self.colors[s][j] if a == 0 else mix(self.colors[s][j], min(0.6, a / 40), 0))
+            return panel
         if rp > 0:                                        # remise a zero : les pieces remontent
             panel = self.panel_base()
             for j, r in enumerate(plan):
