@@ -56,6 +56,9 @@ MUSICAL = False                          # True : chaque piece joue une note (ga
 BLOOM = False                            # True : halo lumineux sur les zones claires (look neon)
 MELODY = False                           # True : les pieces se posent sur les notes d'une melodie (fr_melody)
 ENDING = None                             # "fall" : les boites perdantes se vident, leurs pieces tombent
+LIVE_RANK = False                         # classement en direct : les barres se reordonnent, couronne sur le 1er
+SLOW_LAST = None                          # si fixe : le ralenti final ne couvre que les N dernieres poses
+CUSTOM_ST = None                          # fonction(r) -> (st, note_of) : calendrier des poses impose de l'exterieur
 SPEEDS = None                             # vitesse propre a chaque algo (ex [1.6, 1.2, 1.0, 0.8]) : course asynchrone
 MELODY_MODULE = "fr_melody"               # module qui fournit build(n) -> frames/midi/lh
 MELODY_DROP = 11                         # duree de chute constante en mode melodie (images)
@@ -289,6 +292,9 @@ class Renderer:
             self.starts = self.mel["frames"] - MELODY_DROP
         self.st = np.stack([self.starts[0] + (self.starts - self.starts[0]) / (SPEEDS[k] if SPEEDS else 1.0)
                             for k in range(S)])
+        self.note_of = {}
+        if CUSTOM_ST:
+            self.st, self.note_of = CUSTOM_ST(self)
         rng = np.random.default_rng(99)
         self.colors = [[tuple(int(c * rng.uniform(0.68, 1.0)) for c in st[1]) for _ in range(n)]
                        for st in STRATS]
@@ -343,13 +349,18 @@ class Renderer:
         self.photo = self.gap < PHOTO_GAP
 
         # chronologie (en images d'animation)
-        self.END = float(self.done.max()) + 4
+        placed = np.array([[r is not None for r in self.plans[k]] for k in range(S)])
+        if placed.any():                                        # la fin arrive des la derniere piece VRAIMENT posee
+            self.END = float(self.done[placed].max()) + 4
+        else:
+            self.END = float(self.done.max()) + 4
         self.hold_end = self.END + HOLD_FRAMES
         self.T = self.hold_end + RESET_FRAMES + 2
-        self.f_slow = float(self.st[:, max(0, n - SLOW_K)].max())
-        self.finish = self.done.max(1)
+        ps = np.sort(self.st[placed]) if placed.any() else np.sort(self.st.ravel())
+        self.f_slow = float(ps[max(0, len(ps) - (SLOW_LAST or SLOW_K * S))])
+        self.finish = np.array([self.done[k][placed[k]].max() if placed[k].any() else self.done[k].max() for k in range(S)])
         self.rank = {int(k): i + 1 for i, k in enumerate(np.argsort(self.finish))}
-        self.f_slow_end = float(self.land.max()) + 2
+        self.f_slow_end = float(self.land[placed].max() if placed.any() else self.land.max()) + 2
         # ralenti : relation temps d'animation <-> image de sortie
         self.tau_grid = np.linspace(0, self.T, int(self.T / 0.02) + 1)
         if self.photo:
@@ -409,7 +420,8 @@ class Renderer:
             if MYSTERY:                                   # etiquettes dessinees a part (compose)
                 continue
             d.text((PX[s % 2], PY[s // 2] - 30), name, font=self.f_head, fill=col, anchor="lm")
-            d.text((90, BAR_Y0 + s * BAR_STEP + BAR_H // 2), name, font=self.f_bar, fill=col, anchor="lm")
+            if not LIVE_RANK:
+                d.text((90, BAR_Y0 + s * BAR_STEP + BAR_H // 2), name, font=self.f_bar, fill=col, anchor="lm")
         arr = np.array(img)
         glow = np.zeros_like(arr)
         for s, (_, col, _, _) in enumerate(STRATS):
@@ -424,6 +436,35 @@ class Renderer:
     def fill_at(self, s, tau):
         k = int(np.searchsorted(self.lands_sorted[s], tau, side="right"))
         return self.cum_sorted[s][k] / CAP * 100
+
+    def rank_rows(self, tau, fills, rp=0.0):
+        """Rang en direct (0 = 1er) avec glissement doux ; retient le leader et l'instant ou il a change."""
+        S = len(STRATS)
+        if not hasattr(self, "_rowy") or tau < getattr(self, "_last_tau", -1) or tau == 0:
+            self._rowy = np.arange(S, dtype=float)
+            self.leader, self.lead_t = 0, -99.0
+        order = sorted(range(S), key=lambda k: (-round(fills[k], 1), k))
+        target = np.empty(S)
+        for rk, k in enumerate(order):
+            target[k] = rk
+        if rp > 0:                                        # remise a zero : retour a l'ordre du debut (boucle parfaite)
+            target = np.arange(S, dtype=float)
+            order = list(range(S))
+        self._rowy += (target - self._rowy) * 0.22
+        if rp == 0 and max(fills) > 0.5 and order[0] != self.leader:
+            self.leader, self.lead_t = order[0], tau
+        self._last_tau = tau
+        return self._rowy
+
+    @staticmethod
+    def crown(d, cx, cy, r):
+        """Petite couronne doree centree en (cx, cy), demi-largeur r."""
+        gold, dark = (255, 205, 60), (190, 130, 20)
+        pts = [(cx - r, cy + r * 0.55), (cx - r, cy - r * 0.35), (cx - r * 0.5, cy + r * 0.05), (cx, cy - r * 0.75),
+               (cx + r * 0.5, cy + r * 0.05), (cx + r, cy - r * 0.35), (cx + r, cy + r * 0.55)]
+        d.polygon(pts, fill=gold, outline=dark)
+        for x, y in ((cx - r, cy - r * 0.35), (cx, cy - r * 0.75), (cx + r, cy - r * 0.35)):
+            d.ellipse((x - r * 0.18, y - r * 0.18, x + r * 0.18, y + r * 0.18), fill=(255, 240, 160))
 
     def fall_t0(self, s, j):
         """Instant (image) ou la piece j d'une boite perdante commence a tomber : du bas vers le haut, en cascade."""
@@ -577,10 +618,20 @@ class Renderer:
             fill = self.fill_at(s, tau) * (1 - rp)
             fills.append(fill)
             by = BAR_Y0 + s * BAR_STEP
+            if LIVE_RANK:
+                continue
             cv2.rectangle(frame, (BAR_X0, by), (BAR_X1, by + BAR_H), EMPTY, -1)
             wbar = int((BAR_X1 - BAR_X0) * fill / 100)
             if wbar > 0:
                 cv2.rectangle(frame, (BAR_X0, by), (BAR_X0 + wbar, by + BAR_H), col, -1)
+        if LIVE_RANK:                                     # barres triees, positions qui glissent en douceur
+            rowy = self.rank_rows(tau, fills, rp)
+            for s, (_, col, _, _) in enumerate(STRATS):
+                by = int(round(BAR_Y0 + rowy[s] * BAR_STEP))
+                cv2.rectangle(frame, (BAR_X0, by), (BAR_X1, by + BAR_H), EMPTY, -1)
+                wbar = int((BAR_X1 - BAR_X0) * fills[s] / 100)
+                if wbar > 0:
+                    cv2.rectangle(frame, (BAR_X0, by), (BAR_X0 + wbar, by + BAR_H), col, -1)
         if end_t > 0:                                     # halo qui pulse autour du gagnant
             pad, wn = 60, self.winner
             gx, gy = PX[wn % 2] - pad, PY[wn // 2] - pad
@@ -602,8 +653,16 @@ class Renderer:
         for s in range(len(STRATS)):
             pct = f"{fills[s]:.1f}%"
             d.text((PX[s % 2] + PW, PY[s // 2] - 30), pct, font=self.f_pct, fill=(235, 235, 240), anchor="rm")
-            d.text((BAR_X1 + 15, BAR_Y0 + s * BAR_STEP + BAR_H // 2), pct, font=self.f_bar,
-                   fill=(200, 200, 210), anchor="lm")
+            by_txt = BAR_Y0 + (self._rowy[s] if LIVE_RANK else s) * BAR_STEP + BAR_H // 2
+            d.text((BAR_X1 + 15, by_txt), pct, font=self.f_bar, fill=(200, 200, 210), anchor="lm")
+            if LIVE_RANK:
+                d.text((90, by_txt), STRATS[s][0], font=self.f_bar, fill=STRATS[s][1], anchor="lm")
+        if LIVE_RANK and rp == 0 and max(fills) > 0.5:     # couronne sur le leader (liste + titre de sa boite)
+            ld = self.leader
+            pop = 1 + 0.5 * max(0.0, 1 - (tau - self.lead_t) / 8)
+            self.crown(d, 62, BAR_Y0 + self._rowy[ld] * BAR_STEP + BAR_H // 2, 13 * pop)
+            nx = PX[ld % 2] + d.textlength(STRATS[ld][0], font=self.f_head) + 26
+            self.crown(d, nx, PY[ld // 2] - 32, 17 * pop)
             if SPEEDS and rp == 0 and tau >= self.finish[s]:      # badge d'arrivee : 1st / 2nd / 3rd / 4th DONE
                 rk = self.rank[s]
                 lab = {1: "1ST DONE", 2: "2ND DONE", 3: "3RD DONE", 4: "4TH DONE"}[rk]
