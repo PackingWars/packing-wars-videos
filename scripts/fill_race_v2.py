@@ -661,8 +661,8 @@ class Renderer:
             ld = self.leader
             pop = 1 + 0.5 * max(0.0, 1 - (tau - self.lead_t) / 8)
             self.crown(d, 62, BAR_Y0 + self._rowy[ld] * BAR_STEP + BAR_H // 2, 13 * pop)
-            nx = PX[ld % 2] + d.textlength(STRATS[ld][0], font=self.f_head) + 26
-            self.crown(d, nx, PY[ld // 2] - 32, 17 * pop)
+            self.crown(d, PX[ld % 2] + PW // 2, PY[ld // 2] - 2, 19 * pop)   # couronne posee sur le haut de sa boite
+        for s in range(len(STRATS)):
             if SPEEDS and rp == 0 and tau >= self.finish[s]:      # badge d'arrivee : 1st / 2nd / 3rd / 4th DONE
                 rk = self.rank[s]
                 lab = {1: "1ST DONE", 2: "2ND DONE", 3: "3RD DONE", 4: "4TH DONE"}[rk]
