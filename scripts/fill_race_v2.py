@@ -126,6 +126,7 @@ class Bin:
 
 
 _RANKS = {}
+TETRIS_HOLE = 6                           # tetris_ai : penalite par case vide laissee sous la piece
 TETRIS_K = 4                              # tetris : nombre de colonnes essayees au hasard
 LAZY_FRAC = 0.12                         # smart_lazy : part des emplacements examines
 
@@ -172,6 +173,27 @@ def place(b, w, h, mode, rng):
             cands.append((v[0], v[1], ww, hh))
     if not cands:
         return None
+    if mode == "tetris_ai":                                # joueur de Tetris : teste toutes les colonnes, garde la pose la plus basse
+        H, W = b.O.shape                                   # qui laisse le moins de trous dessous
+        occ = b.O > 0
+        topm = np.where(occ.any(0), occ.argmax(0), H)
+        best, bs = None, -1e18
+        for ww, hh in orient:
+            if ww > W:
+                continue
+            for x in range(0, W - ww + 1):
+                seg = topm[x:x + ww]
+                y = int(seg.min()) - hh
+                if y < 0 or occ[y:y + hh, x:x + ww].any():
+                    continue
+                holes = int((seg - (y + hh)).sum())
+                score = (y + hh) * 10 - holes * TETRIS_HOLE + rng.random() * 0.5
+                if score > bs:
+                    bs, best = score, (x, y, ww, hh)
+        if best is None:
+            return None
+        b.put(*best)
+        return best
     if mode == "tetris":                                   # tombe tout droit dans une colonne au hasard
         H, W = b.O.shape
         occ = b.O > 0
