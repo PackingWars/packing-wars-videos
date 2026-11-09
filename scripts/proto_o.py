@@ -115,11 +115,12 @@ def synth_kalimba(r, sr=SR):
         pl, pr = (0.707, 0.707) if s is None else ((0.89, 0.45) if s % 2 == 0 else (0.45, 0.89))
         L[st:st + len(seg)] += seg * pl
         R[st:st + len(seg)] += seg * pr
+    OCT = 12 if max(r.note_of.values()) < 72 else 0     # toute la melodie transposee d'un bloc (intervalles intacts)
     evs = sorted((r.tf(r.land[s, j]), s, m) for (s, j), m in r.note_of.items())
     tt = np.array([e[0] for e in evs])
     for t, s, m in evs:
         d = ((tt > t - 0.25) & (tt < t + 0.25)).sum() / 0.5
-        add(kalimba(mf(m + 12 if m < 74 else m)), t, 0.22 / np.sqrt(max(1.0, d / 3)), s)
+        add(kalimba(mf(m + OCT)), t, 0.22 / np.sqrt(max(1.0, d / 3)), s)
     for f, m in r.split_lh:
         add(kalimba(mf(m + 12)), r.tf(f), 0.07)
     te = r.tf(r.END)
