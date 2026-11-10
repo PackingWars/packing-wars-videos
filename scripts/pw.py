@@ -62,6 +62,26 @@ def header(img, title, sub="PACKING WARS", y=120, size=74):
     text(img, sub, (VW // 2, y + size * 0.9), 32, (170, 175, 195), light=True)
 
 
+def render_stereo(left, right, seconds, rev=0.32, lp=6000, target_rms=0.13):
+    """Mixe deux bus mono (gauche / droite) en stereo : filtre, reverb, compression douce, niveau homogene."""
+    from scipy.signal import butter, sosfilt
+    import fr_music as fm
+    n = int((seconds + 0.01) * SR)
+    out = []
+    for au in (left, right):
+        a = au.a[:n].copy()
+        a = sosfilt(butter(2, lp, btype="lowpass", fs=SR, output="sos"), a).astype(np.float32)
+        out.append(fm.reverb(a, SR, 1.8, rev))
+    a = np.stack(out, 1)
+    a /= max(1e-9, np.abs(a).max())
+    a = np.tanh(a * 1.8) / np.tanh(1.8)
+    a *= target_rms / max(1e-9, np.sqrt((a ** 2).mean()))
+    a *= min(1.0, 0.92 / max(1e-9, np.abs(a).max()))
+    f = int(0.05 * SR)
+    a[-f:] *= np.linspace(1, 0, f)[:, None]
+    return (a * 32767).astype(np.int16)
+
+
 class Video:
     """Ecrit les images RGB dans ffmpeg puis ajoute le son."""
 
@@ -82,9 +102,9 @@ class Video:
         self.p.stdin.close()
         self.p.wait()
         wav = self.tmpv + ".wav"
-        a = audio.render(self.n / FPS, **kw)
+        a = audio(self.n / FPS) if callable(audio) else audio.render(self.n / FPS, **kw)
         with wave.open(wav, "wb") as wf:
-            wf.setnchannels(1)
+            wf.setnchannels(2 if a.ndim == 2 else 1)
             wf.setsampwidth(2)
             wf.setframerate(SR)
             wf.writeframes(a.tobytes())
@@ -166,6 +186,16 @@ class Audio:
                  + 0.12 * np.sin(2 * np.pi * f * 2 * tt) * np.exp(-tt * 7))
             return s * (1 - np.exp(-tt * 350))
         self.add(self._c(("mallet", int(midi)), mk), t, gain)
+
+    def kalimba(self, t, midi, gain=0.15):
+        """Note de kalimba (le son choisi pour la chaine)."""
+        def mk():
+            f = 440.0 * 2 ** ((midi - 69) / 12)
+            tt = np.arange(int(2.0 * SR)) / SR
+            s = (np.sin(2 * np.pi * f * tt) * np.exp(-tt * 2.6) + 0.22 * np.sin(2 * np.pi * f * 5.95 * tt) * np.exp(-tt * 14)
+                 + 0.1 * np.sin(2 * np.pi * f * 3 * tt) * np.exp(-tt * 6))
+            return s * (1 - np.exp(-tt * 500))
+        self.add(self._c(("kal", int(midi)), mk), t, gain)
 
     def swell(self, t_end, d=2.0, gain=0.1, root=110.0):
         """Montee douce (nappe qui gonfle) a la place du riser bruite."""
