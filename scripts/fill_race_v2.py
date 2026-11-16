@@ -56,6 +56,7 @@ MUSICAL = False                          # True : chaque piece joue une note (ga
 BLOOM = False                            # True : halo lumineux sur les zones claires (look neon)
 MELODY = False                           # True : les pieces se posent sur les notes d'une melodie (fr_melody)
 ENDING = None                             # "fall" : les boites perdantes se vident, leurs pieces tombent
+OBSTACLE_FILL = None                      # couleur des obstacles (cases hors MASK) ; None = fond
 LIVE_RANK = False                         # classement en direct : les barres se reordonnent, couronne sur le 1er
 SLOW_LAST = None                          # si fixe : le ralenti final ne couvre que les N dernieres poses
 CUSTOM_ST = None                          # fonction(r) -> (st, note_of) : calendrier des poses impose de l'exterieur
@@ -414,6 +415,8 @@ class Renderer:
         """Panneau vide : cases utilisables en EMPTY, le reste (hors forme, obstacles) en fond."""
         base = np.full((PH, PW, 3), BG, np.uint8)
         base[self.maskpx] = EMPTY
+        if OBSTACLE_FILL is not None:
+            base[~self.maskpx] = OBSTACLE_FILL
         return base
 
     def outline(self, img, col, thick, off=(0, 0)):
